@@ -8,6 +8,9 @@ from pm4py.objects.log.util import interval_lifecycle
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.algo.discovery.heuristics import algorithm as heuristics_miner
 from pm4py.visualization.petrinet import visualizer as pn_visualizer
+
+
+
 def dictToArray(dic):
     arr = []
     for key in dic:
@@ -16,7 +19,7 @@ def dictToArray(dic):
     return arr
 
 def getUniqueActivities(df):
-    return (len(df["concept:name"].unique()),df["concept:name"].unique())
+    return {"count":len(df["concept:name"].unique()),"activities":df["concept:name"].unique().tolist()}
 
 def getActivitesCount(df):
     return df["concept:name"].value_counts()
@@ -128,7 +131,9 @@ def dictToArray(dic):
     return arr
 
 def getPetrinet(log,path):
+    # TODO: save as svg not png
     net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.99})
+   
     gviz = pn_visualizer.apply(net, im, fm)
     image = pn_visualizer.save(gviz,path)
 

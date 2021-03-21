@@ -132,9 +132,10 @@ def dictToArray(dic):
 
 def getPetrinet(log,path):
     # TODO: save as svg not png
-    net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.99})
+    net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.1})
    
     gviz = pn_visualizer.apply(net, im, fm)
     image = pn_visualizer.save(gviz,path)
 
     return image
+

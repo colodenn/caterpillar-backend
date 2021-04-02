@@ -28,27 +28,23 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 app.config['UPLOAD_EXTENSIONS'] = ['.csv','.xes']
 app.config['UPLOAD_PATH'] = 'Uploads'
-CORS(app,support_credentials=True)
+CORS(app,supports_credentials=True, resources={ r"/.*": {"origins": ["http://localhost:3000"],  "allow_headers": ["Authorization"],  "methods": ["OPTIONS", "GET", "POST"]}})
 mongo = PyMongo(app)
 
-@cross_origin(origin='*',supports_credentials=True)
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@cross_origin(origin='*',supports_credentials=True)
-@app.route('/', methods=['POST'])
-def upload_files():
-    did_token = request.cookies.get('api_token')
-    print(did_token)
+@app.route('/uploadFile',methods=['POST', 'OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
+def uploadFile():
+    did_token = request.headers.get('api_token')
     issuer, user_meta,did_token = checkLogin(did_token)
-    print(issuer)
     uploaded_file = request.files['file']
     filename = secure_filename(uploaded_file.filename)
     if filename != '':
         file_ext = os.path.splitext(filename)[1]
         if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-            print('400')
             return 400
         
     uploaded_file.save(os.path.join(app.config['UPLOAD_PATH'], filename))
@@ -74,15 +70,9 @@ def upload_files():
     resourceCount = getResourceCount(df).to_dict()
     resourceCount = dictToArray(resourceCount)
     durchlaufzeit = getDurchlaufzeit(log)
-    print(getPetrinet(log,'Uploads/petrinet/%s.png' % filename))
-    return {
-     "activitiesCount": activitiesCount,
-     "eventCount": eventCount, 
-     "meanDurchlaufzeit": meanDurchlaufzeit,
-     "resourceCount": resourceCount,
-     "durchlaufzeit" : durchlaufzeit,
-     "image": os.path.join(app.config['UPLOAD_PATH'],'petrinet','%s.png' % filename)
-      }
+    return "200"
+
+
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/uploads/<filename>')
@@ -162,16 +152,16 @@ def user_login():
     return jsonify({"did_token":did_token,"ok": True})
 
 
-@cross_origin(origin='*',supports_credentials=True)
-@app.route('/files', methods=['GET'])
+@app.route('/files',methods=['GET', 'OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def getFiles():
-    did_token = request.cookies.get('api_token')
+    did_token = request.headers.get('api_token')
     issuer, user_meta, did_token = checkLogin(did_token)
     files = mongo.db.files.find({"user":issuer})
     arr = []
     for f in files:
         arr.append({"name":f['filename']})
-    
+    print(jsonify({"files": arr}))
     return jsonify({"files": arr})
 
 @cross_origin(origin='*',supports_credentials=True)
@@ -211,10 +201,12 @@ def checkLogin(did_token):
         print('requesterror')
         return HttpError(str(e))
 
-    if user_info['issuer'] != issuer:
-        return UnAuthorizedError('UnAuthorized user login')
+    # if user_meta['issuer'] != issuer:
+    #     return UnAuthorizedError('UnAuthorized user login')
 
     return issuer, user_meta, did_token
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -17,6 +17,10 @@ decorator==4.4.2
 deprecation==2.1.0
 distlib==0.3.0
 distro==1.4.0
+<<<<<<< HEAD
+=======
+gunicorn==20.0.4
+>>>>>>> 6c2cc0429f6ae0485fe99042ca6eefbcaf9a022b
 dnspython==2.1.0
 eth-abi==2.1.1
 eth-account==0.4.0

@@ -126,16 +126,6 @@ def activitiesArray(filename):
         arr = arr + [{'id': index,'label':index ,'value':value}]
     return {'data':arr}
 
-@cross_origin(origin='*',supports_credentials=True)
-@app.route('/api/meanThroughputtime/<filename>')
-def activitiesArray(filename):
-    with open('log-%s.pickle'%filename, 'rb') as handle:
-            b = pickle.load(handle)
-
-    arr = deltaMeanDurchlaufzeit(b,b)
-   
-   
-    return {'data':arr}
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/v1/user/login', methods=['POST'])

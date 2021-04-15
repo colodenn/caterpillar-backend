@@ -132,9 +132,192 @@ def dictToArray(dic):
 
 def getPetrinet(log,path):
     # TODO: save as svg not png
-    net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.99})
+    net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.1})
    
     gviz = pn_visualizer.apply(net, im, fm)
     image = pn_visualizer.save(gviz,path)
 
     return image
+
+
+
+# Varianzen von Margarete 
+
+def deltaCountActivitiesSame(df1, df2):
+    """Anzahl Doppelte Aktivitäten 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    
+    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    return len([item for item, count in collections.Counter(a).items() if count > 1])
+
+
+def deltaActivitiesSame(df1, df2):
+    """ Doppelte Aktivitäten 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        
+    """
+    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    return [item for item, count in collections.Counter(a).items() if count > 1]
+
+
+def deltaCountActivitiesDiff(df1, df2):
+    """Anzahl Unteschiedliche Aktivitäten 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    
+    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    return len([item for item, count in collections.Counter(a).items() if count == 1])
+
+
+def deltaActivitiesDiff(df1, df2):
+    """ Unteschiedliche Aktivitäten 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        
+    """
+    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    return [item for item, count in collections.Counter(a).items() if count == 1]
+
+
+def deltaActivitiesCount(df1, df2): ##funtioniert noch nicht
+    """Häufigkeit je Doppelte Aktivität
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        
+    """
+    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    dublicate = [item for item, count in collections.Counter(a).items() if count > 1]
+    
+    
+def deltaEvents(df1, df2):
+    """Differenz Anzahl Events 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    x = (getEventCount(df1) - getEventCount(df2))
+    if x > 0:
+        return x
+    return -x
+
+
+def deltaStartEnd(df1, df2): ##schönere Ausgabe, vielleicht nur Zeitunterschied
+    """jeweils Start,End
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        Tupel: (Tuple: (Start timestamp, End timestamp),Tuple: (Start timestamp, End timestamp))
+    """
+    return (getStartEnd(df1), getStartEnd(df2))
+
+
+def deltaCases(df1, df2): 
+    """Differenz Anzahl Cases 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    x = (getCaseCount(df1) - getCaseCount(df2))
+    if x > 0:
+        return x
+    return -x
+
+
+def deltaMeanDurchlaufzeit(log1, log2): 
+    """Differnz Mean Durchlaufzeit
+
+    Args:
+        log (Eventlog): PM4PY Eventlog,log (Eventlog): PM4PY Eventlog
+
+    Returns:
+        float
+    """
+    x = getMeanDurchlaufzeit(log1) - getMeanDurchlaufzeit(log2)
+    if x > 0:
+        return x
+    return -x
+
+
+## def zu Waitingtime
+
+def deltaCountResourcesSame(df1, df2): 
+    """Anzahl Doppelte Resourcen 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    
+    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    return len([item for item, count in collections.Counter(a).items() if count > 1])
+
+
+def deltaResourcesSame(df1, df2):
+    """ Gleiche Resourcen 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        
+    """
+    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    return [item for item, count in collections.Counter(a).items() if count > 1]
+
+
+def deltaCountResourcesDiff(df1, df2): 
+    """Anzahl unterschieldiche Resourcen 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        int
+    """
+    
+    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    return len([item for item, count in collections.Counter(a).items() if count == 1])
+
+
+def deltaResourcesDiff(df1, df2):
+    """ Unterschiedliche Resourcen 
+
+    Args:
+        df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
+
+    Returns:
+        
+    """
+    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    return [item for item, count in collections.Counter(a).items() if count == 1]

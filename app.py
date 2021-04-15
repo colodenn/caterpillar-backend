@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 from flask import jsonify
 from flask_pymongo import PyMongo
 import urllib 
-
+from bson.json_util import dumps
 # connect to MongoDB, change the << MONGODB URL >> to reflect your own connection string
 
 from magic_admin import Magic
@@ -28,12 +28,12 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 app.config['UPLOAD_EXTENSIONS'] = ['.csv','.xes']
 app.config['UPLOAD_PATH'] = 'Uploads'
-CORS(app,supports_credentials=True, resources={ r"/.*": {"origins": ["http://localhost:3000"],  "allow_headers": ["Authorization"],  "methods": ["OPTIONS", "GET", "POST"]}})
+CORS(app,origin='*',headers=['Content-Type','Authorization'],supports_credentials=True, resources={ r"/.*": {"origins": ["http://localhost:3000"],  "allow_headers": ["Authorization"],  "methods": ["OPTIONS", "GET", "POST"]}})
 mongo = PyMongo(app)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return "<H1>Works!</H1>"
 
 @app.route('/uploadFile',methods=['POST', 'OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
@@ -51,14 +51,15 @@ def uploadFile():
    
     log = createLog(app.config['UPLOAD_PATH'],filename)
     
-    with open('log-%s.pickle'%filename, 'wb') as handle:
+    with open('Uploads/log-{}-{}.pickle'.format(filename,issuer), 'wb') as handle:
         pickle.dump(log, handle)
 
     df = createDataFrame(log)
 
-    with open('df-%s.pickle'%filename, 'wb') as handle:
+    with open('Uploads/df-{}-{}.pickle'.format(filename,issuer), 'wb') as handle:
         pickle.dump(df, handle)
 
+    getPetrinet(log,'Uploads/petrinet-{}-{}.png'.format(filename,issuer))
     mydict = { "filename": filename, "user":  issuer}
 
     x = mongo.db.files.insert_one(mydict)
@@ -74,44 +75,55 @@ def uploadFile():
 
 
 
-@cross_origin(origin='*',supports_credentials=True)
+
 @app.route('/uploads/<filename>')
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def upload(filename):
     return send_from_directory(app.config['UPLOAD_PATH'], filename)
 
-@cross_origin(origin='*',supports_credentials=True)
+
 @app.route('/uploads/petrinet/<filename>')
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def petrinet(filename):
-    string = 'Uploads/petrinet/%s.png' % filename
+    did_token = request.headers.get('api_token')
+    issuer, user_meta,did_token = checkLogin(did_token)
+    string = 'Uploads/petrinet-{}-{}.png'.format(filename,issuer)
     print(string)
     return send_file(string, mimetype='image/svg')
 
-@cross_origin(origin='*')
-@app.route('/api/eventcount/<filename>')
-def eventcount(filename):
-    with open('df-%s.pickle'%filename, 'rb') as handle:
-        b = pickle.load(handle)
 
+@app.route('/api/eventcount/<filename>',methods=['GET', 'OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
+def eventcount(filename):
+    did_token = request.headers.get('api_token')
+    issuer, user_meta,did_token = checkLogin(did_token)
+    with open('Uploads/df-{}-{}.pickle'.format(filename,issuer), 'rb') as handle:
+        b = pickle.load(handle)
+    print(getEventCount(b))
     return {'data':getEventCount(b)}
-    
-@cross_origin(origin='*',supports_credentials=True)
+
 @app.route('/api/uniqueActivitiesCount/<filename>')
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def activities(filename):
-    with open('df-%s.pickle'%filename, 'rb') as handle:
+    did_token = request.headers.get('api_token')
+    issuer, user_meta,did_token = checkLogin(did_token)
+    with open('Uploads/df-{}-{}.pickle'.format(filename,issuer), 'rb') as handle:
             b = pickle.load(handle)
     temp = getUniqueActivities(b)
     print(temp['count'])
     return {'data':temp['count']}
 
-@cross_origin(origin='*',supports_credentials=True)
+
 @app.route('/api/activitesArray/<filename>')
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def activitiesArray(filename):
-    with open('df-%s.pickle'%filename, 'rb') as handle:
+    did_token = request.headers.get('api_token')
+    issuer, user_meta,did_token = checkLogin(did_token)
+    with open('Uploads/df-{}-{}.pickle'.format(filename,issuer), 'rb') as handle:
             b = pickle.load(handle)
     arr = []
     for index, value in getActivitesCount(b).items():
         arr = arr + [{'id': index,'label':index ,'value':value}]
-    print(arr)
     return {'data':arr}
 
 @cross_origin(origin='*',supports_credentials=True)
@@ -152,6 +164,30 @@ def user_login():
     return jsonify({"did_token":did_token,"ok": True})
 
 
+@app.route('/tiles/add/<filename>',methods=['POST', 'OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
+def postTiles(filename):
+
+    did_token = request.headers.get('api_token')
+    issuer, user_meta, did_token = checkLogin(did_token)
+    if(mongo.db.tiles.count({"user":issuer,"filename": filename}) > 0):
+        tiles = mongo.db.tiles.update({"user":issuer,"filename": filename},{"user":issuer,"filename":filename,"data":request.json['data']})
+    else:
+        mongo.db.tiles.insert_one({"user":issuer,"filename":filename,"data":request.json['data']})
+    return "200"
+
+@app.route('/tiles/<filename>',methods=['GET', 'OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
+def getTiles(filename):
+    did_token = request.headers.get('api_token')
+    issuer, user_meta, did_token = checkLogin(did_token)
+    tiles = mongo.db.tiles.find_one({"user":issuer,"filename": filename})
+    try:
+        return {"data": tiles.get('data')}
+
+    except:
+        return "500"
+
 @app.route('/files',methods=['GET', 'OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def getFiles():
@@ -164,16 +200,26 @@ def getFiles():
     print(jsonify({"files": arr}))
     return jsonify({"files": arr})
 
-@cross_origin(origin='*',supports_credentials=True)
-@app.route('/file/<filename>', methods=['DELETE'])
+
+@app.route('/file/<filename>', methods=['DELETE','OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def deleteFile(filename):
-    did_token = request.cookies.get('api_token')
+    did_token = request.headers.get('api_token')
+
     
     issuer, user_meta, did_token = checkLogin(did_token)
     
     files = mongo.db.files.delete_one({"filename":filename,"user": issuer})
-    if os.path.exists('Uploads/%s' %filename):
-        os.remove('Uploads/%s' %filename)    
+    if os.path.exists('Uploads/log-{}-{}.pickle'.format(filename,issuer)):
+        os.remove('Uploads/log-{}-{}.pickle'.format(filename,issuer))    
+    else:
+        print("The file does not exist")
+    if os.path.exists('Uploads/df-{}-{}.pickle'.format(filename,issuer)):
+        os.remove('Uploads/df-{}-{}.pickle'.format(filename,issuer))    
+    else:
+        print("The file does not exist")
+    if os.path.exists('Uploads/{}'.format(filename)):
+        os.remove('Uploads/{}'.format(filename))    
     else:
         print("The file does not exist")
 

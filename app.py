@@ -127,7 +127,7 @@ def activitiesArray(filename):
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/meanThroughputtime/<filename>')
-def activitiesArray(filename):
+def meanThroughputtime(filename):
     with open('log-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
 
@@ -138,7 +138,7 @@ def activitiesArray(filename):
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/StartEnd/<filename>')
-def activitiesArray(filename):
+def StartEnd(filename):
     with open('log-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
 
@@ -150,7 +150,7 @@ def activitiesArray(filename):
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/CaseCount/<filename>')
-def activitiesArray(filename):
+def CaseCount(filename):
     with open('log-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
 
@@ -161,7 +161,7 @@ def activitiesArray(filename):
   
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/Throughputtime/<filename>')
-def activitiesArray(filename):
+def Throughputtime(filename):
     with open('df-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
     arr = []
@@ -172,7 +172,7 @@ def activitiesArray(filename):
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/UniqueResource/<filename>')
-def activitiesArray(filename):
+def UniqueResource(filename):
     with open('log-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
 
@@ -182,7 +182,7 @@ def activitiesArray(filename):
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/ResourceCount/<filename>')
-def activitiesArray(filename):
+def Ressource(filename):
     with open('df-%s.pickle'%filename, 'rb') as handle:
             b = pickle.load(handle)
     arr = []

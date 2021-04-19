@@ -1,3 +1,4 @@
+# test
 # imports
 import os
 from flask_cors import CORS, cross_origin
@@ -94,7 +95,8 @@ def eventcount(filename):
         b = pickle.load(handle)
     print(getEventCount(b))
     return {'data':getEventCount(b)}
-
+    
+@cross_origin(origin='*',supports_credentials=True)
 @app.route('/api/uniqueActivitiesCount/<filename>')
 @cross_origin(origin='*',headers=['Content-Type','Authorization'],supports_credentials=True,resources={ r"/*": {"origins": "http://localhost:3000"}})
 def activities(filename):
@@ -119,6 +121,72 @@ def activitiesArray(filename):
         arr = arr + [{'id': index,'label':index ,'value':value}]
     return {'data':arr}
 
+
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/meanThroughputtime/<filename>')
+def meanThroughputtime(filename):
+    with open('log-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+
+    arr = getMeanDurchlaufzeit(b)
+   
+   
+    return {'data':arr}
+
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/StartEnd/<filename>')
+def StartEnd(filename):
+    with open('log-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+
+    arr = getStartEnd(b)
+   
+   
+    return {'data':arr}
+
+
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/CaseCount/<filename>')
+def CaseCount(filename):
+    with open('log-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+
+    arr = getCaseCount(b)
+   
+   
+    return {'data':arr}
+  
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/Throughputtime/<filename>')
+def Throughputtime(filename):
+    with open('df-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+    arr = []
+    for index, value in getDurchlaufzeit.items():
+        arr = arr + [{'id': index,'label':index ,'value':value}]
+    print(arr)
+    return {'data':arr}    
+
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/UniqueResource/<filename>')
+def UniqueResource(filename):
+    with open('log-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+
+    arr = getUniqueResource(b)
+      
+    return {'data':arr}
+
+@cross_origin(origin='*',supports_credentials=True)
+@app.route('/api/ResourceCount/<filename>')
+def Ressource(filename):
+    with open('df-%s.pickle'%filename, 'rb') as handle:
+            b = pickle.load(handle)
+    arr = []
+    for index, value in getResourceCount.items():
+        arr = arr + [{'id': index,'label':index ,'value':value}]
+    print(arr)
+    return {'data':arr}  
 
 @cross_origin(origin='*',supports_credentials=True)
 @app.route('/v1/user/login', methods=['POST'])
@@ -219,6 +287,7 @@ def deleteFile(filename):
 
     return "200"
 
+    return issuer, user_meta, did_token
 
 def checkLogin(did_token):
     if did_token is None:

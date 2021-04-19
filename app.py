@@ -59,18 +59,11 @@ def uploadFile():
     with open('Uploads/df-{}-{}.pickle'.format(filename,issuer), 'wb') as handle:
         pickle.dump(df, handle)
 
-    getPetrinet(log,'Uploads/petrinet-{}-{}.png'.format(filename,issuer))
+    #getPetrinet(log,'Uploads/petrinet-{}-{}.png'.format(filename,issuer))
     mydict = { "filename": filename, "user":  issuer}
 
-    x = mongo.db.files.insert_one(mydict)
+    mongo.db.files.insert_one(mydict)
 
-    activitiesCount = getActivitesCount(df).to_dict()
-    activitiesCount = dictToArray(activitiesCount)
-    eventCount = getEventCount(df)
-    meanDurchlaufzeit = getMeanDurchlaufzeit(log)
-    resourceCount = getResourceCount(df).to_dict()
-    resourceCount = dictToArray(resourceCount)
-    durchlaufzeit = getDurchlaufzeit(log)
     return "200"
 
 

@@ -8,7 +8,7 @@ from pm4py.objects.log.util import interval_lifecycle
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.algo.discovery.heuristics import algorithm as heuristics_miner
 from pm4py.visualization.petrinet import visualizer as pn_visualizer
-
+import ast
 
 
 def dictToArray(dic):
@@ -18,11 +18,14 @@ def dictToArray(dic):
 
     return arr
 
+
 def getUniqueActivities(df):
-    return {"count":len(df["concept:name"].unique()),"activities":df["concept:name"].unique().tolist()}
+    return {"count": len(df["concept:name"].unique()), "activities": df["concept:name"].unique().tolist()}
+
 
 def getActivitesCount(df):
     return df["concept:name"].value_counts()
+
 
 def getEventCount(df):
     """Get event count of dataframe
@@ -35,6 +38,7 @@ def getEventCount(df):
     """
     return len(df)
 
+
 def getStartEnd(df):
     """Get Start and End timestamp from dataframe
 
@@ -46,7 +50,8 @@ def getStartEnd(df):
     """
     start = df.iloc[0]['time:timestamp']
     end = df.iloc[-1]['time:timestamp']
-    return (start,end)
+    return (start, end)
+
 
 def getCaseCount(df):
     """Get case count
@@ -59,6 +64,7 @@ def getCaseCount(df):
     """
     return (len(df['caseid']))
 
+
 def getDurchlaufzeit(log):
     """Get Throughputtime
 
@@ -69,8 +75,9 @@ def getDurchlaufzeit(log):
         [list]: Returns throughputtime per case
     """
     all_case_durations = case_statistics.get_all_casedurations(log, parameters={
-    case_statistics.Parameters.TIMESTAMP_KEY: "time:timestamp"})
+        case_statistics.Parameters.TIMESTAMP_KEY: "time:timestamp"})
     return all_case_durations
+
 
 def getMeanDurchlaufzeit(log):
     """Mean throughputtime
@@ -85,7 +92,8 @@ def getMeanDurchlaufzeit(log):
         case_statistics.Parameters.TIMESTAMP_KEY: "time:timestamp"
     })
     return median_case_duration
-      
+
+
 def getWaitingtime(log):
     """Get Waitingtime
 
@@ -98,30 +106,39 @@ def getWaitingtime(log):
     enriched_log = interval_lifecycle.assign_lead_cycle_time(log)
     return enriched_log
 
+
 def getResourceCount(df):
-    return (df['org:resource'].value_counts())
+    arr = []
+    temp = ast.literal_eval(df['org:resource'].value_counts().to_json())
+    for i in temp:
+        arr += [{"id": i, "label": i, "value": temp[i]}]
+    return (arr)
+
 
 def getUniqueResource(df):
-    return (len(df["org:resource"].unique()),df["org:resource"].unique())
+    return (len(df["org:resource"].unique()), df["org:resource"].unique())
+
 
 def createDataFrame(log):
-        newlog = []
-        caseid = 0
-        df = []
-        for l in log:
-            caseid += 1
-            for i in l:
-                i['caseid'] = caseid
-                newlog = newlog + [i] 
-        df = pd.DataFrame(newlog)
-        return df
+    newlog = []
+    caseid = 0
+    df = []
+    for l in log:
+        caseid += 1
+        for i in l:
+            i['caseid'] = caseid
+            newlog = newlog + [i]
+    df = pd.DataFrame(newlog)
+    return df
 
-def createLog(path,filename):
+
+def createLog(path, filename):
     variant = xes_importer.Variants.ITERPARSE
     parameters = {variant.value.Parameters.TIMESTAMP_SORT: True}
     log = xes_importer.apply(os.path.join(path, filename),
-                            variant=variant, parameters=parameters)
+                             variant=variant, parameters=parameters)
     return log
+
 
 def dictToArray(dic):
     arr = []
@@ -130,18 +147,19 @@ def dictToArray(dic):
 
     return arr
 
-def getPetrinet(log,path):
+
+def getPetrinet(log, path):
     # TODO: save as svg not png
-    net, im, fm = heuristics_miner.apply(log, parameters={heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.1})
-   
+    net, im, fm = heuristics_miner.apply(log, parameters={
+                                         heuristics_miner.Variants.CLASSIC.value.Parameters.DEPENDENCY_THRESH: 0.1})
+
     gviz = pn_visualizer.apply(net, im, fm)
-    image = pn_visualizer.save(gviz,path)
+    image = pn_visualizer.save(gviz, path)
 
     return image
 
 
-
-# Varianzen von Margarete 
+# Varianzen von Margarete
 
 def deltaCountActivitiesSame(df1, df2):
     """Anzahl Doppelte Aktivitäten 
@@ -152,8 +170,9 @@ def deltaCountActivitiesSame(df1, df2):
     Returns:
         int
     """
-    
-    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+
+    a = np.concatenate([df1['concept:name'].unique(),
+                       df2['concept:name'].unique()])
     return len([item for item, count in collections.Counter(a).items() if count > 1])
 
 
@@ -164,9 +183,10 @@ def deltaActivitiesSame(df1, df2):
         df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
 
     Returns:
-        
+
     """
-    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    a = np.concatenate([df1['concept:name'].unique(),
+                       df2['concept:name'].unique()])
     return [item for item, count in collections.Counter(a).items() if count > 1]
 
 
@@ -179,8 +199,9 @@ def deltaCountActivitiesDiff(df1, df2):
     Returns:
         int
     """
-    
-    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+
+    a = np.concatenate([df1['concept:name'].unique(),
+                       df2['concept:name'].unique()])
     return len([item for item, count in collections.Counter(a).items() if count == 1])
 
 
@@ -191,25 +212,28 @@ def deltaActivitiesDiff(df1, df2):
         df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
 
     Returns:
-        
+
     """
-    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
+    a = np.concatenate([df1['concept:name'].unique(),
+                       df2['concept:name'].unique()])
     return [item for item, count in collections.Counter(a).items() if count == 1]
 
 
-def deltaActivitiesCount(df1, df2): ##funtioniert noch nicht
+def deltaActivitiesCount(df1, df2):  # funtioniert noch nicht
     """Häufigkeit je Doppelte Aktivität
 
     Args:
         df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
 
     Returns:
-        
+
     """
-    a = np.concatenate([df1['concept:name'].unique(), df2['concept:name'].unique()])
-    dublicate = [item for item, count in collections.Counter(a).items() if count > 1]
-    
-    
+    a = np.concatenate([df1['concept:name'].unique(),
+                       df2['concept:name'].unique()])
+    dublicate = [item for item, count in collections.Counter(
+        a).items() if count > 1]
+
+
 def deltaEvents(df1, df2):
     """Differenz Anzahl Events 
 
@@ -225,7 +249,7 @@ def deltaEvents(df1, df2):
     return -x
 
 
-def deltaStartEnd(df1, df2): ##schönere Ausgabe, vielleicht nur Zeitunterschied
+def deltaStartEnd(df1, df2):  # schönere Ausgabe, vielleicht nur Zeitunterschied
     """jeweils Start,End
 
     Args:
@@ -237,7 +261,7 @@ def deltaStartEnd(df1, df2): ##schönere Ausgabe, vielleicht nur Zeitunterschied
     return (getStartEnd(df1), getStartEnd(df2))
 
 
-def deltaCases(df1, df2): 
+def deltaCases(df1, df2):
     """Differenz Anzahl Cases 
 
     Args:
@@ -252,7 +276,7 @@ def deltaCases(df1, df2):
     return -x
 
 
-def deltaMeanDurchlaufzeit(log1, log2): 
+def deltaMeanDurchlaufzeit(log1, log2):
     """Differnz Mean Durchlaufzeit
 
     Args:
@@ -267,9 +291,9 @@ def deltaMeanDurchlaufzeit(log1, log2):
     return -x
 
 
-## def zu Waitingtime
+# def zu Waitingtime
 
-def deltaCountResourcesSame(df1, df2): 
+def deltaCountResourcesSame(df1, df2):
     """Anzahl Doppelte Resourcen 
 
     Args:
@@ -278,8 +302,9 @@ def deltaCountResourcesSame(df1, df2):
     Returns:
         int
     """
-    
-    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+
+    a = np.concatenate([df1['org:resource'].unique(),
+                       df2['org:resource'].unique()])
     return len([item for item, count in collections.Counter(a).items() if count > 1])
 
 
@@ -290,13 +315,14 @@ def deltaResourcesSame(df1, df2):
         df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
 
     Returns:
-        
+
     """
-    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    a = np.concatenate([df1['org:resource'].unique(),
+                       df2['org:resource'].unique()])
     return [item for item, count in collections.Counter(a).items() if count > 1]
 
 
-def deltaCountResourcesDiff(df1, df2): 
+def deltaCountResourcesDiff(df1, df2):
     """Anzahl unterschieldiche Resourcen 
 
     Args:
@@ -305,8 +331,9 @@ def deltaCountResourcesDiff(df1, df2):
     Returns:
         int
     """
-    
-    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+
+    a = np.concatenate([df1['org:resource'].unique(),
+                       df2['org:resource'].unique()])
     return len([item for item, count in collections.Counter(a).items() if count == 1])
 
 
@@ -317,7 +344,8 @@ def deltaResourcesDiff(df1, df2):
         df (Dataframe): Pandas dataframe, df (Dataframe): Pandas dataframe
 
     Returns:
-        
+
     """
-    a = np.concatenate([df1['org:resource'].unique(), df2['org:resource'].unique()])
+    a = np.concatenate([df1['org:resource'].unique(),
+                       df2['org:resource'].unique()])
     return [item for item, count in collections.Counter(a).items() if count == 1]

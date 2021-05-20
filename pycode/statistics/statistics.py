@@ -62,7 +62,7 @@ def getCaseCount(df):
     Returns:
         Integer: case count 
     """
-    return (len(df['caseid']))
+    return (len(df['caseid'].unique()))
 
 
 def getDurchlaufzeit(log):
@@ -108,6 +108,14 @@ def getWaitingtime(log):
 
 
 def getResourceCount(df):
+    """Get Resource Count
+
+    Args:
+        df (dataframe): Dataframe
+
+    Returns:
+        [array]: [array of dicts (["id": "test", "label": "test", "value": 1337])]
+    """
     arr = []
     temp = ast.literal_eval(df['org:resource'].value_counts().to_json())
     for i in temp:

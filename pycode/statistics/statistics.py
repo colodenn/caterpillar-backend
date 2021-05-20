@@ -357,3 +357,9 @@ def deltaResourcesDiff(df1, df2):
     a = np.concatenate([df1['org:resource'].unique(),
                        df2['org:resource'].unique()])
     return [item for item, count in collections.Counter(a).items() if count == 1]
+
+
+def getTable(df):
+    df['time:timestamp'] = df['time:timestamp'].apply(
+        lambda x: x.strftime('%Y-%m-%d '))
+    return df.head(10).to_dict('records')

@@ -54,6 +54,8 @@ def uploadFile():
     df = createDataFrame(log)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'wb') as handle:
         pickle.dump(df, handle)
+
+    getPetrinet(log, 'Uploads/petrinet-{}-{}.png'.format(filename, issuer))
     mydict = {"filename": filename, "user":  issuer}
     mongo.db.files.insert_one(mydict)
     return "200"
@@ -68,10 +70,10 @@ def upload(filename):
 @app.route('/uploads/petrinet/<filename>')
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def petrinet(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
+    print(request.cookies.get('api_token')[:-3] + "=")
     issuer, user_meta, did_token = checkLogin(did_token)
     string = 'Uploads/petrinet-{}-{}.png'.format(filename, issuer)
-    print(string)
     return send_file(string, mimetype='image/svg')
 
 
@@ -86,11 +88,11 @@ def eventcount(filename):
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def activities(filename):
     did_token = request.headers.get('api_token')
+    print(request.headers.get('api_token'))
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
     temp = getUniqueActivities(b)
-    print(temp['count'])
     return {'data': temp['count']}
 
 
@@ -134,7 +136,6 @@ def CaseCount(filename):
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
     arr = getCaseCount(b)
-    print(arr)
     return {'data': arr}
 
 
@@ -146,7 +147,6 @@ def Throughputtime(filename):
     with open('Uploads/log-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
     arr = []
-    print(getDurchlaufzeit(b))
     # TODO: For every case
     return {'data': arr}
 
@@ -164,7 +164,17 @@ def UniqueResource(filename):
 def Ressource(filename):
     b = getDf(request, filename)
     arr = getResourceCount(b)
-    print(arr)
+    return {'data': arr}
+
+
+@app.route('/api/getTable/<filename>')
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+def table(filename):
+    b = getDf(request, filename)
+    arr = getTable(b)
+    print(arr[0])
+    print(type(arr[0]))
+
     return {'data': arr}
 
 
@@ -211,7 +221,6 @@ def postTiles(filename):
     did_token = request.headers.get('api_token')
     issuer, user_meta, did_token = checkLogin(did_token)
     if(mongo.db.tiles.count({"user": issuer, "filename": filename}) > 0):
-        print(request.json['data'])
         tiles = mongo.db.tiles.update({"user": issuer, "filename": filename}, {
                                       "user": issuer, "filename": filename, "data": request.json['data']})
     else:

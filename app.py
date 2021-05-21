@@ -230,12 +230,26 @@ def postTiles(filename):
     string = str(filename) + str(issuer)
     result = hashlib.md5(string.encode())
     if(mongo.db.tiles.count({"user": issuer, "filename": filename}) > 0):
-        tiles = mongo.db.tiles.update({"user": issuer, "filename": filename}, {
-                                      "user": issuer, "filename": filename, "data": request.json['data'], "slug": result.hexdigest()})
+        tiles = mongo.db.tiles.update_one({"user": issuer, "filename": filename}, {"$set": {
+            "data": request.json['data']}})
     else:
         mongo.db.tiles.insert_one(
             {"user": issuer, "filename": filename, "data": request.json['data']})
     return "200"
+
+
+@app.route('/share/create/<filename>', methods=['GET', 'OPTIONS'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+def createShare(filename):
+    did_token = request.headers.get('api_token')
+    issuer, user_meta, did_token = checkLogin(did_token)
+    string = str(filename) + str(issuer)
+    result = hashlib.md5(string.encode())
+
+    tiles = mongo.db.tiles.update_one({"user": issuer, "filename": filename}, {"$set": {
+        "slug": result.hexdigest()}})
+    print(tiles)
+    return {"data": result.hexdigest()}
 
 
 @app.route('/tiles/<filename>', methods=['GET', 'OPTIONS'])
@@ -247,14 +261,14 @@ def getTiles(filename):
     try:
         return {"data": tiles.get('data')}
     except:
-        return "500"
+        return {"data": []}
 
 
 @app.route('/share/<filename>', methods=['GET', 'OPTIONS'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def getShare(filename):
-    print("get share")
     tiles = mongo.db.tiles.find_one({"slug": filename})
+    print(tiles)
     try:
         return {"data": tiles.get('data')}
     except:

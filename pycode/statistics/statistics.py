@@ -48,8 +48,8 @@ def getStartEnd(df):
     Returns:
         Tuple: (Start timestamp, End timestamp)
     """
-    start = df.iloc[0]['time:timestamp']
-    end = df.iloc[-1]['time:timestamp']
+    start = df['time:timestamp'].min()
+    end = df['time:timestamp'].max()
     return (start, end)
 
 
@@ -79,7 +79,7 @@ def getDurchlaufzeit(log):
     return all_case_durations
 
 
-def getMeanDurchlaufzeit(log):
+def getMedianDurchlaufzeit(log):
     """Mean throughputtime
 
     Args:
@@ -91,7 +91,21 @@ def getMeanDurchlaufzeit(log):
     median_case_duration = case_statistics.get_median_caseduration(log, parameters={
         case_statistics.Parameters.TIMESTAMP_KEY: "time:timestamp"
     })
-    return median_case_duration
+    day = median_case_duration // (24 * 3600)
+    time = median_case_duration % (24 * 3600)
+    hour = time // 3600
+    time %= 3600
+    minutes = time // 60
+    time %= 60
+    seconds = time
+    return ("%dD:%dH:%dM:%dS" % (day, hour, minutes, seconds))
+
+
+def getAllDurchlaufzeit(log):
+    all_case_durations = case_statistics.get_all_casedurations(log, parameters={
+        case_statistics.Parameters.TIMESTAMP_KEY: "time:timestamp"})
+
+    return all_case_durations
 
 
 def getWaitingtime(log):

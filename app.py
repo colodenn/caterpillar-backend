@@ -37,6 +37,15 @@ def index():
     return "<H1>Works!</H1>"
 
 
+@app.after_request
+def add_headers(response):
+    response.headers.add('Content-Type', 'application/json')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Expose-Headers', 'Content-Type,Content-Length,Authorization,X-Pagination')
+    return response
+
 @app.route('/uploadFile', methods=['POST', 'OPTIONS'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def uploadFile():

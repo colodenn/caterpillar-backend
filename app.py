@@ -21,26 +21,42 @@ import hashlib
 
 # config
 app = Flask(__name__)
+CORS(app)
 app.config["MONGO_URI"] = "mongodb+srv://Random:" + urllib.parse.quote(
     "123qwe")+"@cluster0.ec6t5.mongodb.net/Cluster0?retryWrites=true&w=majority"
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 app.config['UPLOAD_EXTENSIONS'] = ['.csv', '.xes']
 app.config['UPLOAD_PATH'] = 'Uploads'
-CORS(app, origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/.*": {
-     "origins": ["http://localhost:3000"],  "allow_headers": ["Authorization"],  "methods": ["OPTIONS", "GET", "POST"]}})
 mongo = PyMongo(app)
 
 
-@app.route('/')
-def index():
-    return "<H1>Works!</H1>"
+@app.route('/api/test')
+def test():
+    return "<h1>test</h1>"
 
 
-@app.route('/uploadFile', methods=['POST', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.after_request
+def add_headers(response):
+    response.headers.add('Content-Type', 'application/json')
+    response.headers.add('Access-Control-Allow-Origin', 'https://catrpillr.tech')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'PUT, GET, POST, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Expose-Headers',
+                         'Content-Type,Content-Length,Authorization,X-Pagination')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+
+    return response
+
+
+@app.route('/api/uploadFile', methods=['POST', 'OPTIONS'])
 def uploadFile():
-    did_token = request.headers.get('api_token')
+    print(request.cookies)
+    print(request.headers)
+    did_token = request.cookies.get('api_token')[:-3] + "="
+
     issuer, user_meta, did_token = checkLogin(did_token)
     uploaded_file = request.files['file']
     filename = secure_filename(uploaded_file.filename)
@@ -66,14 +82,12 @@ def uploadFile():
     return "200"
 
 
-@app.route('/uploads/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/uploads/<filename>')
 def upload(filename):
     return send_from_directory(app.config['UPLOAD_PATH'], filename)
 
 
-@app.route('/uploads/petrinet/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/uploads/petrinet/<filename>')
 def petrinet(filename):
     did_token = request.cookies.get('api_token')[:-3] + "="
     print(request.cookies.get('api_token')[:-3] + "=")
@@ -83,17 +97,15 @@ def petrinet(filename):
 
 
 @app.route('/api/eventcount/<filename>', methods=['GET', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def eventcount(filename):
     b = getDf(request, filename)
     return {'data': getEventCount(b)}
 
 
 @app.route('/api/uniqueActivitiesCount/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def activities(filename):
-    did_token = request.headers.get('api_token')
-    print(request.headers.get('api_token'))
+    did_token = request.cookies.get('api_token')[:-3] + "="
+    print(request.cookies.get('api_token')[:-3] + "=")
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -102,9 +114,8 @@ def activities(filename):
 
 
 @app.route('/api/activitesArray/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def activitiesArray(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -115,9 +126,8 @@ def activitiesArray(filename):
 
 
 @app.route('/api/medianThroughputtime/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def medianThroughputtime(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/log-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -126,7 +136,6 @@ def medianThroughputtime(filename):
 
 
 @app.route('/api/StartEnd/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def StartEnd(filename):
     b = getDf(request, filename)
     arr = getStartEnd(b)
@@ -134,9 +143,8 @@ def StartEnd(filename):
 
 
 @app.route('/api/CaseCount/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def CaseCount(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -145,9 +153,8 @@ def CaseCount(filename):
 
 
 @app.route('/api/Throughputtime/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def Throughputtime(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/log-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -159,7 +166,6 @@ def Throughputtime(filename):
 
 
 @app.route('/api/UniqueResource/<filename>')
-@cross_origin(origin='*', supports_credentials=True)
 def UniqueResource(filename):
     b = getDf(request, filename)
     arr = getUniqueResource(b)
@@ -167,7 +173,6 @@ def UniqueResource(filename):
 
 
 @app.route('/api/ResourceCount/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def Ressource(filename):
     b = getDf(request, filename)
     arr = getResourceCount(b)
@@ -175,7 +180,6 @@ def Ressource(filename):
 
 
 @app.route('/api/getTable/<filename>')
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 def table(filename):
     b = getDf(request, filename)
     arr = getTable(b)
@@ -185,8 +189,7 @@ def table(filename):
     return {'data': arr}
 
 
-@cross_origin(origin='*', supports_credentials=True)
-@app.route('/v1/user/login', methods=['POST'])
+@app.route('/api/v1/user/login', methods=['POST'])
 def user_login():
     did_token = parse_authorization_header_value(
         request.headers.get('Authorization'),
@@ -222,10 +225,9 @@ def user_login():
     return jsonify({"did_token": did_token, "ok": True})
 
 
-@app.route('/tiles/add/<filename>', methods=['POST', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/tiles/add/<filename>', methods=['POST', 'OPTIONS'])
 def postTiles(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     string = str(filename) + str(issuer)
     result = hashlib.md5(string.encode())
@@ -238,10 +240,9 @@ def postTiles(filename):
     return "200"
 
 
-@app.route('/share/create/<filename>', methods=['GET', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/share/create/<filename>', methods=['GET', 'OPTIONS'])
 def createShare(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     string = str(filename) + str(issuer)
     result = hashlib.md5(string.encode())
@@ -252,10 +253,9 @@ def createShare(filename):
     return {"data": result.hexdigest()}
 
 
-@app.route('/tiles/<filename>', methods=['GET', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/tiles/<filename>', methods=['GET', 'OPTIONS'])
 def getTiles(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     tiles = mongo.db.tiles.find_one({"user": issuer, "filename": filename})
     try:
@@ -264,8 +264,7 @@ def getTiles(filename):
         return {"data": []}
 
 
-@app.route('/share/<filename>', methods=['GET', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/share/<filename>', methods=['GET', 'OPTIONS'])
 def getShare(filename):
     tiles = mongo.db.tiles.find_one({"slug": filename})
     print(tiles)
@@ -275,10 +274,12 @@ def getShare(filename):
         return "500"
 
 
-@app.route('/files', methods=['GET', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/files', methods=['GET', 'OPTIONS'])
 def getFiles():
-    did_token = request.headers.get('api_token')
+    print(request.cookies)
+    print(request.headers)
+    print(request.headers.get('api_token'))
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     files = mongo.db.files.find({"user": issuer})
     arr = []
@@ -287,10 +288,9 @@ def getFiles():
     return jsonify({"files": arr})
 
 
-@app.route('/file/<filename>', methods=['DELETE', 'OPTIONS'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'], supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+@app.route('/api/file/<filename>', methods=['DELETE', 'OPTIONS'])
 def deleteFile(filename):
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     files = mongo.db.files.delete_one({"filename": filename, "user": issuer})
     if os.path.exists('Uploads/log-{}-{}.pickle'.format(filename, issuer)):
@@ -338,16 +338,14 @@ def checkLogin(did_token):
 
 def getLog(request, filename):
     """Open Log
-
     Args:
         request (Request): Request
         filename (String): Filename
-
     Returns:
         File: returns File
     """
 
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/log-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -356,15 +354,13 @@ def getLog(request, filename):
 
 def getDf(request, filename):
     """Open Dataframe
-
     Args:
         request (Request): Request
         filename (String): Filename
-
     Returns:
         File: returns File
     """
-    did_token = request.headers.get('api_token')
+    did_token = request.cookies.get('api_token')[:-3] + "="
     issuer, user_meta, did_token = checkLogin(did_token)
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
@@ -372,4 +368,4 @@ def getDf(request, filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

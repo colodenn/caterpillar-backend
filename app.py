@@ -22,7 +22,7 @@ app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb+srv://Random:" + urllib.parse.quote(
     "123qwe")+"@cluster0.ec6t5.mongodb.net/Cluster0?retryWrites=true&w=majority"
 app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 50000 * 1024 * 1024
 app.config['UPLOAD_EXTENSIONS'] = ['.csv', '.xes']
 app.config['UPLOAD_PATH'] = 'Uploads'
 mongo = PyMongo(app)
@@ -71,11 +71,16 @@ def uploadFile():
 
     getPetrinet(log, 'Uploads/petrinet-{}-{}.png'.format(filename, issuer))
     string = str(filename) + str(issuer)
-    print(type(string))
     result = hashlib.md5(string.encode())
     mydict = {"filename": filename,
               "user":  issuer, "slug": result.hexdigest()}
     mongo.db.files.insert_one(mydict)
+
+    data = {"i": "0", "x": 0, "y": 0, "w": 2, "h": 1,
+            "name": "choose template", "type": "template"}
+
+    mongo.db.tiles.insert_one(
+        {"user": issuer, "filename": filename, "data": [data]})
     return "200"
 
 
@@ -236,6 +241,27 @@ def postTiles(filename):
         tiles = mongo.db.tiles.update_one({"user": issuer, "filename": filename}, {"$set": {
             "data": request.json['data']}})
     else:
+        print(request.json['data'])
+        mongo.db.tiles.insert_one(
+            {"user": issuer, "filename": filename, "data": request.json['data']})
+    return "200"
+
+
+@app.route('/api/tiles/all/<filename>', methods=['POST', 'OPTIONS'])
+def postTilesAll(filename):
+    try:
+        did_token1 = request.cookies.get('api_token')[:-3] + "="
+    except:
+        return "401"
+
+    issuer, user_meta, did_token = checkLogin(did_token1)
+    string = str(filename) + str(issuer)
+    result = hashlib.md5(string.encode())
+    if(mongo.db.tiles.count({"user": issuer, "filename": filename}) > 0):
+        tiles = mongo.db.tiles.update_one({"user": issuer, "filename": filename}, {"$set": {
+            "data": request.json['data']}})
+    else:
+        print(request.json['data'])
         mongo.db.tiles.insert_one(
             {"user": issuer, "filename": filename, "data": request.json['data']})
     return "200"
@@ -306,6 +332,10 @@ def deleteFile(filename):
         os.remove('Uploads/{}'.format(filename))
     else:
         print("The file does not exist")
+    try:
+        mongo.db.tiles.delete_one({"filename": filename, "user": issuer})
+    except:
+        print("cant delete entry")
     return "200"
     return issuer, user_meta, did_token
 

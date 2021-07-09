@@ -4,7 +4,7 @@ from pycode.statistics.statistics import *
 import pandas as pd
 import pickle
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory, send_file
+from flask import Flask, json, render_template, request, redirect, url_for, abort, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from flask import jsonify
 from flask_pymongo import PyMongo
@@ -174,11 +174,23 @@ def UniqueResource(filename):
     return {'data': arr}
 
 
+@app.route('/api/columns/<filename>')
+def columns(filename):
+    b = getDf(request, filename)
+    columns = b.columns.values.tolist()
+    return {'columns': columns}
+
+
 @app.route('/api/ResourceCount/<filename>')
 def Ressource(filename):
     b = getDf(request, filename)
     arr = getResourceCount(b)
     return {'data': arr}
+
+
+@app.route('/api/customPieChart/<filename>')
+def custom(filename):
+    return {'data': []}
 
 
 @app.route('/api/getTable/<filename>')
@@ -237,6 +249,7 @@ def postTiles(filename):
     issuer, user_meta, did_token = checkLogin(did_token1)
     string = str(filename) + str(issuer)
     result = hashlib.md5(string.encode())
+    print(request.json)
     if(mongo.db.tiles.count({"user": issuer, "filename": filename}) > 0):
         tiles = mongo.db.tiles.update_one({"user": issuer, "filename": filename}, {"$set": {
             "data": request.json['data']}})

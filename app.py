@@ -28,11 +28,6 @@ app.config['UPLOAD_PATH'] = 'Uploads'
 mongo = PyMongo(app)
 
 
-@app.route('/api/test')
-def test():
-    return "<h1>test</h1>"
-
-
 @app.after_request
 def add_headers(response):
     response.headers.add('Content-Type', 'application/json')

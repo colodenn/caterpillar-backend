@@ -9,6 +9,9 @@ from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.algo.discovery.heuristics import algorithm as heuristics_miner
 from pm4py.visualization.petrinet import visualizer as pn_visualizer
 import ast
+import pandas as pd
+from pm4py.objects.log.util import dataframe_utils
+from pm4py.objects.conversion.log import converter as log_converter
 
 
 def dictToArray(dic):
@@ -155,11 +158,21 @@ def createDataFrame(log):
 
 
 def createLog(path, filename):
-    variant = xes_importer.Variants.ITERPARSE
-    parameters = {variant.value.Parameters.TIMESTAMP_SORT: True}
-    log = xes_importer.apply(os.path.join(path, filename),
-                             variant=variant, parameters=parameters)
-    return log
+
+    name, extension = os.path.splitext(filename)
+    print(extension)
+    if extension == ".xes":
+        variant = xes_importer.Variants.ITERPARSE
+        parameters = {variant.value.Parameters.TIMESTAMP_SORT: True}
+        log = xes_importer.apply(os.path.join(path, filename),
+                                 variant=variant, parameters=parameters)
+        return log
+    else:
+        log_csv = pd.read_csv(os.path.join(path, filename), sep=',')
+        log_csv = dataframe_utils.convert_timestamp_columns_in_df(log_csv)
+        log_csv = log_csv.sort_values('START')
+        event_log = log_converter.apply(log_csv)
+        return event_log
 
 
 def dictToArray(dic):

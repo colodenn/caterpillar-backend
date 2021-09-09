@@ -1,3 +1,4 @@
+from fpdf import FPDF
 import os
 from flask_cors import CORS, cross_origin
 from pycode.statistics.statistics import *
@@ -6,7 +7,9 @@ import pickle
 import numpy as np
 from flask import Flask, json, render_template, request, redirect, url_for, abort, send_from_directory, send_file
 from werkzeug.utils import secure_filename
-from flask import jsonify
+from flask import jsonify, make_response
+import matplotlib.pyplot as plt
+
 from flask_pymongo import PyMongo
 import urllib
 from bson.json_util import dumps
@@ -16,6 +19,7 @@ from magic_admin.error import DIDTokenError
 from magic_admin.error import RequestError
 from magic_admin.error import BadRequestError
 import hashlib
+from fpdf import FPDF
 
 # config
 app = Flask(__name__)
@@ -23,14 +27,13 @@ app.config["MONGO_URI"] = "mongodb+srv://Random:" + urllib.parse.quote(
     "123qwe")+"@cluster0.ec6t5.mongodb.net/Cluster0?retryWrites=true&w=majority"
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['MAX_CONTENT_LENGTH'] = 50000 * 1024 * 1024
-app.config['UPLOAD_EXTENSIONS'] = ['.csv', '.xes']
+app.config['UPLOAD_EXTENSIONS'] = ['.xes']
 app.config['UPLOAD_PATH'] = 'Uploads'
 mongo = PyMongo(app)
 
 
 @app.after_request
 def add_headers(response):
-    response.headers.add('Content-Type', 'application/json')
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Methods',
                          'PUT, GET, POST, DELETE, OPTIONS')
@@ -57,7 +60,9 @@ def uploadFile():
         if file_ext not in app.config['UPLOAD_EXTENSIONS']:
             return 400
     uploaded_file.save(os.path.join(app.config['UPLOAD_PATH'], filename))
+
     log = createLog(app.config['UPLOAD_PATH'], filename)
+
     with open('Uploads/log-{}-{}.pickle'.format(filename, issuer), 'wb') as handle:
         pickle.dump(log, handle)
     df = createDataFrame(log)
@@ -70,7 +75,6 @@ def uploadFile():
     mydict = {"filename": filename,
               "user":  issuer, "slug": result.hexdigest()}
     mongo.db.files.insert_one(mydict)
-
     data = {"i": "0", "x": 0, "y": 0, "w": 2, "h": 1,
             "name": "choose template", "type": "template"}
 
@@ -81,7 +85,7 @@ def uploadFile():
 
 @app.route('/api/uploads/<filename>')
 def upload(filename):
-    return send_from_directory(app.config['UPLOAD_PATH'], filename)
+    return send_from_directory(app.config['UPLOAD_PATH'], filename, as_attachment=True)
 
 
 @app.route('/api/uploads/petrinet/<filename>')
@@ -162,6 +166,17 @@ def Throughputtime(filename):
     return {'data': arr}
 
 
+@app.route('/api/Calendar/<filename>')
+def Calendar(filename):
+    did_token = request.cookies.get('api_token')[:-3] + "="
+    issuer, user_meta, did_token = checkLogin(did_token)
+    with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
+        b = pickle.load(handle)
+    arr = countEventsPerDay(b)
+    print(arr)
+    return {'data': arr}
+
+
 @app.route('/api/UniqueResource/<filename>')
 def UniqueResource(filename):
     b = getDf(request, filename)
@@ -192,8 +207,6 @@ def custom(filename):
 def table(filename):
     b = getDf(request, filename)
     arr = getTable(b)
-    print(arr[0])
-    print(type(arr[0]))
 
     return {'data': arr}
 
@@ -231,7 +244,7 @@ def user_login():
         user_info = mongo.db.users.insert_one(dic)
     if user_info['issuer'] != issuer:
         return UnAuthorizedError('UnAuthorized user login')
-    return jsonify({"did_token": did_token, "ok": True})
+    return jsonify({"did_token": did_token, "ok": True, "public_address": email})
 
 
 @app.route('/api/tiles/add/<filename>', methods=['POST', 'OPTIONS'])
@@ -348,6 +361,126 @@ def deleteFile(filename):
     return issuer, user_meta, did_token
 
 
+@app.route('/api/pdf/<filename>', methods=['GET', 'OPTIONS'])
+def getPdf(filename):
+    did_token = request.cookies.get('api_token')[:-3] + "="
+    issuer, user_meta, did_token = checkLogin(did_token)
+
+    createReport(filename, user_meta.data['email'], issuer)
+    return send_from_directory(app.config['UPLOAD_PATH'], 'pdf-{}-{}.pdf'.format(filename, user_meta.data['email']), mimetype='application/pdf', attachment_filename='file.pdf')
+
+
+def createReport(titel, author, did):
+
+    pdf = FPDF()
+    tiles = mongo.db.tiles.find_one({"filename": titel, "user": did})
+    data = tiles['data']
+    # create dict from data with name and data
+    dict = {}
+    for i in range(len(data)):
+        dict[data[i]['name']] = data[i]['data']
+
+    print(dict)
+
+    pdf.add_page()
+    pdf.set_xy(0, 0)
+    pdf.ln(10)
+
+    pdf.set_font('arial', 'B', 12)
+    pdf.cell(1)
+
+    pdf.cell(10, 10, "Caterpillar", 0, 0, 'L')
+    pdf.cell(150)
+    pdf.cell(0, 10, "07.09.2021", 0, 0, 'R')
+
+    pdf.ln(20)
+
+    # create a pdf with header in which is a logo on the left and a title on the right
+    pdf.cell(0, 10, titel, 0, 0, 'C')
+    pdf.ln(10)
+    pdf.set_font('arial', 'B', 10)
+    pdf.cell(0, 10, 'Author: ' + author, 0, 0, 'C')
+    pdf.line(10, 60, 200, 60)
+    pdf.ln(10)
+    pdf.set_font('arial', 'B', 10)
+    pdf.ln(20)
+
+    # write a report in the pdf containing variables
+    pdf.cell(0, 10, 'Report:', 0, 0, 'L')
+    pdf.ln(10)
+    pdf.set_font('arial', 'B', 10)
+
+    pdf.cell(-200)
+    pdf.ln(10)
+
+    if(dict['Event count']):
+        pdf.cell(0, 10, 'The eventlog contains {} events'.format(
+            dict['Event count']), 0, 0, 'L')
+        pdf.ln(10)
+
+    if(dict['Unique Activites Count']):
+        pdf.cell(0, 10, 'The eventlog contains {} unique activites'.format(
+            dict['Unique Activites Count']), 0, 0, 'L')
+        pdf.ln(10)
+    if(dict['Median Throughputtime']):
+        pdf.cell(0, 10, 'The median throughputtime is {}'.format(
+            dict['Median Throughputtime']), 0, 0, 'L')
+        pdf.ln(10)
+    if(dict['Period']):
+        pdf.cell(0, 10, 'The first event occoured on {} and the last on {}'.format(
+            dict['Period'][0], dict['Period'][1]), 0, 0, 'L')
+        pdf.ln(10)
+
+    if(dict['Resource Pie Chart']):
+
+        labels = [x['label'] for x in dict['Resource Pie Chart']]
+        sizes = [x['value'] for x in dict['Resource Pie Chart']]
+
+        fig1, ax1 = plt.subplots()
+        plt.suptitle('Resource Piechart')
+
+        ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+                shadow=True, startangle=90)
+        # Equal aspect ratio ensures that pie is drawn as a circle.
+        ax1.axis('equal')
+        # plt.show()
+        fig1.savefig('Uploads/resource_pie_chart-{}-{}.png'.format(titel, did))
+        pdf.image('Uploads/resource_pie_chart-{}-{}.png'.format(titel, did), x=None,
+                  y=None, w=200, h=0, type='', link='')
+
+        pdf.ln(10)
+
+    if(dict['Aktivity Pie Chart']):
+
+        bars = [x['label'] for x in dict['Aktivity Pie Chart']]
+        height = [x['value'] for x in dict['Aktivity Pie Chart']]
+        createBarchart(bars, height, 'Activity Barchart', titel, did)
+
+        pdf.image('Uploads/activity_pie_chart-{}-{}.png'.format(titel, did), x=None,
+                  y=None, w=180, h=0, type='', link='')
+
+        pdf.ln(10)
+
+    if(dict['Petrinet']):
+        pdf.image('Uploads/petrinet-{}-{}.png'.format(titel, did), x=None,
+                  y=None, w=200, h=0, type='', link='')
+        pdf.ln(10)
+
+    pdf.output('Uploads/pdf-{}-{}.pdf'.format(titel, author), 'F')
+    return pdf
+
+
+def createBarchart(bars, height, title, titel, did):
+    fig, ax = plt.subplots()
+    plt.suptitle(title)
+    ax.bar(bars, height)
+    ax.set_xticklabels(bars, rotation=90)
+    ax.set_xticks(bars)
+    plt.show()
+    fig.savefig('Uploads/activity_pie_chart-{}-{}.png'.format(titel,
+                did), bbox_inches='tight')
+
+
 def checkLogin(did_token):
     if did_token is None:
         raise BadRequestError(
@@ -404,6 +537,11 @@ def getDf(request, filename):
     with open('Uploads/df-{}-{}.pickle'.format(filename, issuer), 'rb') as handle:
         b = pickle.load(handle)
     return b
+
+
+def createLogFromCsv(path, filename):
+    log_csv = pd.read_csv(os.path.join(path, filename), sep=',')
+    log_csv = dataframe_utils.convert_timestamp_columns_in_df(log_csv)
 
 
 if __name__ == "__main__":

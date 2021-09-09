@@ -111,6 +111,18 @@ def getAllDurchlaufzeit(log):
     return all_case_durations
 
 
+def countEventsPerDay(df):
+
+    test = pd.to_datetime(df['time:timestamp'],
+                          utc=True).dt.strftime('%Y-%m-%d').value_counts().to_dict()
+
+    # convert dict to array of dicts
+    arr = []
+    for key in test:
+        arr.append({"day": key, "value": test[key]})
+    return (arr)
+
+
 def getWaitingtime(log):
     """Get Waitingtime
 
@@ -145,22 +157,27 @@ def getUniqueResource(df):
 
 
 def createDataFrame(log):
-    newlog = []
-    caseid = 0
-    df = []
-    for l in log:
-        caseid += 1
-        for i in l:
-            i['caseid'] = caseid
-            newlog = newlog + [i]
-    df = pd.DataFrame(newlog)
+    # newlog = []
+    # caseid = 0
+    # df = []
+    # for l in log:
+    #     caseid += 1
+    #     for i in l:
+    #         i['caseid'] = caseid
+    #         newlog = newlog + [i]
+    # df = pd.DataFrame(newlog)
+    parameters = {
+        log_converter.Variants.TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: 'case'}
+
+    df = log_converter.apply(log, parameters=parameters,
+                             variant=log_converter.Variants.TO_DATA_FRAME)
+
     return df
 
 
 def createLog(path, filename):
 
     name, extension = os.path.splitext(filename)
-    print(extension)
     if extension == ".xes":
         variant = xes_importer.Variants.ITERPARSE
         parameters = {variant.value.Parameters.TIMESTAMP_SORT: True}
@@ -252,6 +269,15 @@ def deltaActivitiesDiff(df1, df2):
     a = np.concatenate([df1['concept:name'].unique(),
                        df2['concept:name'].unique()])
     return [item for item, count in collections.Counter(a).items() if count == 1]
+
+
+def pandasProfiling(df):
+    profile = ProfileReport(
+        df, title="Pandas Profiling Report", explorative=True)
+    print(profile)
+
+    print(profile.to_string())
+    return(profile)
 
 
 def deltaActivitiesCount(df1, df2):  # funtioniert noch nicht

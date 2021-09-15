@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from flask import jsonify, make_response
 import matplotlib.pyplot as plt
 
+from datetime import date
 from flask_pymongo import PyMongo
 import urllib
 from bson.json_util import dumps
@@ -391,7 +392,10 @@ def createReport(titel, author, did):
 
     pdf.cell(10, 10, "Caterpillar", 0, 0, 'L')
     pdf.cell(150)
-    pdf.cell(0, 10, "07.09.2021", 0, 0, 'R')
+    today = date.today()
+    d1 = today.strftime("%d-%m-%Y")
+    
+    pdf.cell(0, 10,d1 , 0, 0, 'R')
 
     pdf.ln(20)
 
@@ -413,25 +417,25 @@ def createReport(titel, author, did):
     pdf.cell(-200)
     pdf.ln(10)
 
-    if(dict['Event count']):
+    if('Event count' in dict):
         pdf.cell(0, 10, 'The eventlog contains {} events'.format(
             dict['Event count']), 0, 0, 'L')
         pdf.ln(10)
 
-    if(dict['Unique Activites Count']):
+    if('Unique Activites Count' in dict):
         pdf.cell(0, 10, 'The eventlog contains {} unique activites'.format(
             dict['Unique Activites Count']), 0, 0, 'L')
         pdf.ln(10)
-    if(dict['Median Throughputtime']):
+    if('Median Throughputtime' in dict):
         pdf.cell(0, 10, 'The median throughputtime is {}'.format(
             dict['Median Throughputtime']), 0, 0, 'L')
         pdf.ln(10)
-    if(dict['Period']):
+    if('Period' in dict):
         pdf.cell(0, 10, 'The first event occoured on {} and the last on {}'.format(
             dict['Period'][0], dict['Period'][1]), 0, 0, 'L')
         pdf.ln(10)
 
-    if(dict['Resource Pie Chart']):
+    if "Resource Pie Chart" in dict:
 
         labels = [x['label'] for x in dict['Resource Pie Chart']]
         sizes = [x['value'] for x in dict['Resource Pie Chart']]
@@ -450,10 +454,10 @@ def createReport(titel, author, did):
 
         pdf.ln(10)
 
-    if(dict['Aktivity Pie Chart']):
+    if "Activity Pie Chart" in dict:
 
-        bars = [x['label'] for x in dict['Aktivity Pie Chart']]
-        height = [x['value'] for x in dict['Aktivity Pie Chart']]
+        bars = [x['label'] for x in dict['Activity Pie Chart']]
+        height = [x['value'] for x in dict['Activity Pie Chart']]
         createBarchart(bars, height, 'Activity Barchart', titel, did)
 
         pdf.image('Uploads/activity_pie_chart-{}-{}.png'.format(titel, did), x=None,
@@ -461,7 +465,7 @@ def createReport(titel, author, did):
 
         pdf.ln(10)
 
-    if(dict['Petrinet']):
+    if('Petrinet' in dict):
         pdf.image('Uploads/petrinet-{}-{}.png'.format(titel, did), x=None,
                   y=None, w=200, h=0, type='', link='')
         pdf.ln(10)
